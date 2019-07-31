@@ -62,7 +62,7 @@ def prepare_variantdict(variantlist, vcf_header):
                 variant_info_dict[info_column] = "N/A"
         variant_dict["INFO"] = variant_info_dict
         final_variant_dict_list.append(variant_dict)
-    return final_variant_dict_list
+    return final_variant_dict_list, unique_info_columns
 
 def create_refseq_dict(refseqgtf):
     refseqgene_dict = {}
@@ -251,13 +251,13 @@ def annotate_vcf(vcf, refseq, output):
 
     # Prepare Dict of Variants
     variantlist, vcf_header = extract_variantlist(vcf)
-    variant_dict_list = prepare_variantdict(variantlist, vcf_header)
+    variant_dict_list, unique_info_columns = prepare_variantdict(variantlist, vcf_header)
 
     # Prepare Header for ExcelFile
     variant_write_table_header = ["Varianttype", "Breakpoint 1", "GeneInfo 1", "Breakpoint 2", "GeneInfo 2"]
     for columnname in variant_dict_list[0]:
         if columnname == "INFO":
-            for info_columnname in variant_dict_list[0]["INFO"]:
+            for info_columnname in unique_info_columns:
                 variant_write_table_header.append(info_columnname)
         else:
                 variant_write_table_header.append(columnname)
@@ -307,8 +307,8 @@ def annotate_vcf(vcf, refseq, output):
         variant_write.extend([variant_type, f"{variant_chrom}:{variant_pos}", pos_gene_info, f"{end_chrom}:{end_pos}", endpos_gene_info])
         for stat in variant:
             if stat == "INFO":
-                for info_stat in variant[stat]:
-                    variant_write.extend([variant[stat][info_stat]])
+                for unique_info_name in unique_info_columns:
+                    variant_write.extend([variant[stat][unique_info_name]])
             else:
                 variant_write.extend([variant[stat]])
         variant_write_table.append(variant_write)
