@@ -279,7 +279,7 @@ def annotate_vcf(vcf, refseq, output):
         
         if variant_type == "MantaBND":
             # G]4:11470658] or [4:11470658[A
-            regex = re.compile(r'[\[\]](\w*:[0-9]*)[\[\]]')
+            regex = re.compile(r'[\[\]]([\w\.]*:[0-9]*)[\[\]]')
             end_location = regex.findall(variant["ALT"])[0]
             end_chrom = end_location.split(":")[0]
             end_pos = int(end_location.split(":")[1])
