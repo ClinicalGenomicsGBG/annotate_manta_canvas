@@ -12,30 +12,33 @@ def extract_variantlist(vcf):
             variant_info = variant.split('\t')
             if not variant_info[0].startswith('#'):
                 variantlist.append(variant_info)
-    return variantlist
+            else:
+                if variant_info[0].startswith('#CHROM'):
+                    vcf_header = variant_info
+    return variantlist, vcf_header
 
-def prepare_variantdict(variantlist):
-    columns = {
-                "chrom": 0, 
-                "pos": 1, 
-                "varianttype": 2, 
-                "reference": 3, 
-                "variant": 4, 
-                "filter": 6, 
-                "info": 7,
-                "format": 8,
-                "normal": 9,
-                "tumor": 10
-                }
+def prepare_variantdict(variantlist, vcf_header):
+    #columns = {
+    #            "chrom": 0, 
+    #            "pos": 1, 
+    #            "varianttype": 2, 
+    #            "reference": 3, 
+    #            "variant": 4, 
+    #            "filter": 6, 
+    #            "info": 7,
+    #            "format": 8,
+    #            "normal": 9,
+    #            "tumor": 10
+    #            }
     variant_dict_list = []
     all_info_columns = []
     for variant in variantlist:
         variant_dict = {}
-        for column in columns:
-            variant_dict[column] = variant[columns[column]]
+        for column_index, column_name in enumerate(vcf_header):
+            variant_dict[column_name] = variant[column_index]
             # Collect all info-columnnames
-            if column == "info":
-                info_columns = [info_column.split("=")[0] for info_column in variant_dict["info"].split(";")]
+            if column_name == "INFO":
+                info_columns = [info_column.split("=")[0] for info_column in variant_dict["INFO"].split(";")]
                 all_info_columns.extend(info_columns)
         variant_dict_list.append(variant_dict)
 
@@ -46,7 +49,7 @@ def prepare_variantdict(variantlist):
     final_variant_dict_list = []
     for variant_dict in variant_dict_list:
         variant_info_dict = {}
-        variant_info_list = [info_column.split("=") for info_column in variant_dict["info"].split(";")]
+        variant_info_list = [info_column.split("=") for info_column in variant_dict["INFO"].split(";")]
         for info_type in variant_info_list:
             if len(info_type) < 2:
                 variant_info_dict[info_type[0]] = "yes"
@@ -57,7 +60,7 @@ def prepare_variantdict(variantlist):
                 continue
             else:
                 variant_info_dict[info_column] = "N/A"
-        variant_dict["info"] = variant_info_dict
+        variant_dict["INFO"] = variant_info_dict
         final_variant_dict_list.append(variant_dict)
     return final_variant_dict_list
 
@@ -247,52 +250,63 @@ def annotate_vcf(vcf, refseq, output):
         output = output.strip("/")
 
     # Prepare Dict of Variants
-    variantlist = extract_variantlist(vcf)
-    variant_dict_list = prepare_variantdict(variantlist)
+    variantlist, vcf_header = extract_variantlist(vcf)
+    variant_dict_list = prepare_variantdict(variantlist, vcf_header)
 
     # Prepare Header for ExcelFile
     variant_write_table_header = ["Varianttype", "Breakpoint 1", "GeneInfo 1", "Breakpoint 2", "GeneInfo 2"]
     for columnname in variant_dict_list[0]:
-        if columnname == "info":
-            for info_columnname in variant_dict_list[0]["info"]:
+        if columnname == "INFO":
+            for info_columnname in variant_dict_list[0]["INFO"]:
                 variant_write_table_header.append(info_columnname)
         else:
                 variant_write_table_header.append(columnname)
 
     # Prepare Dict of RefseqTranscripts
     refseq_dict = create_refseq_dict(refseq)
+    # Chrom List
+    chrom_list = []
+    for chrom in refseq_dict:
+        chrom_list.append(chrom)
 
     # Loop Through each Variant in dict and find overlapping / nearby genes
     variant_write_table = []
     for variant in variant_dict_list:
         variant_write = []
-        variant_chrom = variant["chrom"]
-        variant_pos = int(variant["pos"])
-        variant_type = variant["varianttype"].split(":")[0]
+        variant_chrom = variant["#CHROM"]
+        variant_pos = int(variant["POS"])
+        variant_type = variant["ID"].split(":")[0]
         
         if variant_type == "MantaBND":
             # G]4:11470658] or [4:11470658[A
             regex = re.compile(r'[\[\]](\w*:[0-9]*)[\[\]]')
-            end_location = regex.findall(variant["variant"])[0]
+            end_location = regex.findall(variant["ALT"])[0]
             end_chrom = end_location.split(":")[0]
             end_pos = int(end_location.split(":")[1])
         else:
             end_chrom = variant_chrom
-            end_pos = int(variant["info"]["END"])
+            end_pos = int(variant["INFO"]["END"])
 
-        pos_gene_info = find_overlapping_gene(refseq_dict, variant_chrom, variant_pos)
-        if not pos_gene_info:
-            pos_gene_info = find_nearby_gene(refseq_dict, variant_chrom, variant_pos)
-        if not variant_type == "MantaINS":
-            endpos_gene_info = find_overlapping_gene(refseq_dict, end_chrom, end_pos)
-            if not endpos_gene_info:
-                endpos_gene_info = find_nearby_gene(refseq_dict, end_chrom, end_pos)
+        if variant_chrom not in chrom_list:
+            pos_gene_info = ["Not available for chromosome"]
         else:
-            endpos_gene_info = ["N/A"]
+            pos_gene_info = find_overlapping_gene(refseq_dict, variant_chrom, variant_pos)
+            if not pos_gene_info:
+                pos_gene_info = find_nearby_gene(refseq_dict, variant_chrom, variant_pos)
+                
+        if not variant_type == "MantaINS":
+            if end_chrom in chrom_list:
+                endpos_gene_info = find_overlapping_gene(refseq_dict, end_chrom, end_pos)
+                if not endpos_gene_info:
+                    endpos_gene_info = find_nearby_gene(refseq_dict, end_chrom, end_pos)
+            else:
+                endpos_gene_info = ["Not available for chromosome"]
+        else:
+            endpos_gene_info = ["Not available for INS"]
 
         variant_write.extend([variant_type, f"{variant_chrom}:{variant_pos}", pos_gene_info, f"{end_chrom}:{end_pos}", endpos_gene_info])
         for stat in variant:
-            if stat == "info":
+            if stat == "INFO":
                 for info_stat in variant[stat]:
                     variant_write.extend([variant[stat][info_stat]])
             else:
