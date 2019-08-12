@@ -247,8 +247,7 @@ def annotate_vcf(vcf, refseq, output):
     # Prepare OutputNames
     vcfname = os.path.basename(vcf)
     if output.endswith("/"):
-        output = output.strip("/")
-
+        output = output[:-1]
     # Prepare Dict of Variants
     variantlist, vcf_header = extract_variantlist(vcf)
     variant_dict_list, unique_info_columns = prepare_variantdict(variantlist, vcf_header)
