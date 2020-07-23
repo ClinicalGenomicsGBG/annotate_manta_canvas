@@ -48,30 +48,34 @@ def find_crossing_genes(refseq_dict, variant):
         v_chrom = variant["#CHROM"]
         start = int(variant["POS"])
         stop = int(variant["INFO"]["END"])
-        for gene in refseq_dict[v_chrom]:
-            smallest_list = []
-            largest_list = []
-            for transcript in refseq_dict[v_chrom][gene]:
-                g_start = int(refseq_dict[v_chrom][gene][transcript]["smallest"])
-                g_stop = int(refseq_dict[v_chrom][gene][transcript]["largest"])
-                smallest_list.append(g_start)
-                largest_list.append(g_stop)
-            g_start = min(smallest_list)
-            g_stop = max(largest_list)
-            if start <= g_start:
-                if stop >= g_stop:
-                    gene_crossing.append(gene)  # -------VS--GS---GE----VE INCLUDING GENE
-                elif stop >= g_start:
-                    gene_crossing.append(f"in:{gene}") # ---VS---GS---VE--GE--- # INSIDE GENE
+        try:
+            for gene in refseq_dict[v_chrom]:
+                smallest_list = []
+                largest_list = []
+                for transcript in refseq_dict[v_chrom][gene]:
+                    g_start = int(refseq_dict[v_chrom][gene][transcript]["smallest"])
+                    g_stop = int(refseq_dict[v_chrom][gene][transcript]["largest"])
+                    smallest_list.append(g_start)
+                    largest_list.append(g_stop)
+                g_start = min(smallest_list)
+                g_stop = max(largest_list)
+                if start <= g_start:
+                    if stop >= g_stop:
+                        gene_crossing.append(gene)  # -------VS--GS---GE----VE INCLUDING GENE
+                    elif stop >= g_start:
+                        gene_crossing.append(f"in:{gene}") # ---VS---GS---VE--GE--- # INSIDE GENE
+                    else:
+                        pass #----VS---VE---GS---GE---- BEFORE GENE
                 else:
-                    pass #----VS---VE---GS---GE---- BEFORE GENE
-            else:
-                if start <= g_stop: # ------GS----VS--GE---
-                    gene_crossing.append(f"in:{gene}") # ------GS--VS---VE--GE--- # INSIDE GENE
-                else:
-                    pass # ------GS---GE---VS---VE-- AFTER GENE
-        gene_crossing_str = ",".join(gene_crossing)
-        variant["gene_crossing"] = gene_crossing_str
+                    if start <= g_stop: # ------GS----VS--GE---
+                        gene_crossing.append(f"in:{gene}") # ------GS--VS---VE--GE--- # INSIDE GENE
+                    else:
+                        pass # ------GS---GE---VS---VE-- AFTER GENE
+            gene_crossing_str = ",".join(gene_crossing)
+            variant["gene_crossing"] = gene_crossing_str
+        except Exception as e:
+            print(f"Exception: {e} ")
+            variant["gene_crossing"] = None
     else:
         variant["gene_crossing"] = None
     return variant

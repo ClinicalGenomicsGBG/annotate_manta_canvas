@@ -64,10 +64,10 @@ def write_to_sheet(sheetname, variantdict, header, canvas_info, formatdict, exce
 def write_to_excel(output, vcfname, header, variantinfo, canvas_info):
     variantdict_tier1, variantdict_tier2 = divide_into_sheets(variantinfo)
 
-    with open("variantdict_tier1.json", "w") as jsondump:
-        json.dump(variantdict_tier1, jsondump, ensure_ascii=False, indent=4)
-    with open("variantdict_tier2.json", "w") as jsondump:
-        json.dump(variantdict_tier2, jsondump, ensure_ascii=False, indent=4)
+#    with open("variantdict_tier1.json", "w") as jsondump:
+#        json.dump(variantdict_tier1, jsondump, ensure_ascii=False, indent=4)
+#    with open("variantdict_tier2.json", "w") as jsondump:
+#        json.dump(variantdict_tier2, jsondump, ensure_ascii=False, indent=4)
 
     excelfile = xlsxwriter.Workbook(f"{output}/{vcfname}.xlsx")
  

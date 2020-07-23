@@ -46,14 +46,15 @@ def annotate_vcf(vcf, refseq, output):
         chrom_list.append(chrom)
 
 
-    count = 0
-    for variant in variant_dict_list:
-        count += 1
-        variant_gene_dict = find_crossing_genes(refseq_dict, variant)
-        with open(f"variant_dicts_examples/variant_{count}.json", "w") as jsondump:
-            json.dump(variant_gene_dict, jsondump, ensure_ascii=False, indent=4)
-        if count > 100:
-            break
+#    count = 0
+#    for variant in variant_dict_list:
+#        count += 1
+#        variant_gene_dict = find_crossing_genes(refseq_dict, variant)
+#
+#        with open(f"variant_dicts_examples/variant_{count}.json", "w") as jsondump:
+#            json.dump(variant_gene_dict, jsondump, ensure_ascii=False, indent=4)
+#        if count > 100:
+#            break
 
     variant_dict_list_new = []
     for variant in variant_dict_list:
@@ -110,8 +111,8 @@ def annotate_vcf(vcf, refseq, output):
     
     variant_dict = prepare_excel_variantdict(variant_write_table)
     
-    with open("variantdict.json", "w") as jsondump:
-        json.dump(variant_dict, jsondump, ensure_ascii=False, indent=4)
+#    with open("variantdict.json", "w") as jsondump:
+#        json.dump(variant_dict, jsondump, ensure_ascii=False, indent=4)
     write_to_excel(output, vcfname, variant_write_table_header, variant_dict, canvas_info) 
 
 if __name__ == '__main__':
