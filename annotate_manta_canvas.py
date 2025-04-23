@@ -70,16 +70,27 @@ def annotate_vcf(vcf, refseq, output):
         variant_chrom = variant["#CHROM"]
         variant_pos = int(variant["POS"])
         variant_type = variant["ID"].split(":")[0]
-        
+
         if variant_type == "MantaBND":
-            # G]4:11470658] or [4:11470658[A
+            # Handle breakends
             regex = re.compile(r'[\[\]]([\w\.]*:[0-9]*)[\[\]]')
             end_location = regex.findall(variant["ALT"])[0]
             end_chrom = end_location.split(":")[0]
             end_pos = int(end_location.split(":")[1])
         else:
             end_chrom = variant_chrom
-            end_pos = int(variant["INFO"]["END"])
+            # Handle missing or invalid END field
+            end_value = variant["INFO"].get("END", None)
+            try:
+                end_pos = int(end_value)
+            except (ValueError, TypeError):
+                # If END is missing or invalid, calculate it for deletions using SVLEN
+                if variant_type == "MantaDEL" and "SVLEN" in variant["INFO"]:
+                    svlen = int(variant["INFO"]["SVLEN"])
+                    end_pos = variant_pos + abs(svlen)
+                else:
+                    print(f"Warning: Missing or invalid END for variant {variant['ID']} at {variant_chrom}:{variant_pos}")
+                    end_pos = variant_pos  # Default to POS if END is missing or invalid
 
         if variant_chrom not in chrom_list:
             pos_gene_info = ["Not available for chromosome"]
@@ -87,7 +98,7 @@ def annotate_vcf(vcf, refseq, output):
             pos_gene_info = find_overlapping_gene(refseq_dict, variant_chrom, variant_pos)
             if not pos_gene_info:
                 pos_gene_info = find_nearby_gene(refseq_dict, variant_chrom, variant_pos)
-                
+
         if not variant_type == "MantaINS":
             if end_chrom in chrom_list:
                 endpos_gene_info = find_overlapping_gene(refseq_dict, end_chrom, end_pos)
