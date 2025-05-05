@@ -88,6 +88,11 @@ def annotate_vcf(vcf, refseq, output):
                 if variant_type == "MantaDEL" and "SVLEN" in variant["INFO"]:
                     svlen = int(variant["INFO"]["SVLEN"])
                     end_pos = variant_pos + abs(svlen)
+                elif variant_type == "MantaDUP" and "SVLEN" in variant["INFO"]:
+                    svlen = int(variant["INFO"]["SVLEN"])
+                    end_pos = variant_pos + svlen
+                elif variant_type == "MantaINS":
+                    end_pos = variant_pos  # For insertions, END is the same as POS
                 else:
                     print(f"Warning: Missing or invalid END for variant {variant['ID']} at {variant_chrom}:{variant_pos}")
                     end_pos = variant_pos  # Default to POS if END is missing or invalid
