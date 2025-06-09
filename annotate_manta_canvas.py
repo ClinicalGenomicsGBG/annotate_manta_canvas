@@ -29,6 +29,12 @@ def annotate_vcf(vcf, refseq, output):
 
     # Prepare Header for ExcelFile
     variant_write_table_header = ["Varianttype", "Breakpoint 1", "GeneInfo 1", "Breakpoint 2", "GeneInfo 2"]
+    # If no variants, write empty header and return
+    if not variant_dict_list:
+        print("No variants found in the VCF file.")
+        write_to_excel(output, vcfname, variant_write_table_header, [], canvas_info)
+        return
+    
     for columnname in variant_dict_list[0]:
         if columnname == "INFO":
             for info_columnname in unique_info_columns:
